@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Barnsley Fern Lab</title>
+<title>IFS Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -261,12 +261,6 @@
     padding-right: 6px;
     cursor: pointer;
   }
-  .swatch {
-    display: inline-block;
-    width: 10px; height: 10px;
-    border-radius: 2px;
-    margin-right: 6px;
-  }
   td input {
     width: 100%;
     min-width: 54px;
@@ -279,6 +273,32 @@
     padding: 4px;
   }
   td input:hover { border-color: var(--line); }
+  td input.pick {
+    width: 24px;
+    min-width: 0;
+    height: 22px;
+    padding: 0;
+    margin-right: 6px;
+    vertical-align: middle;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: none;
+    cursor: pointer;
+  }
+  input.pick::-webkit-color-swatch-wrapper { padding: 2px; }
+  input.pick::-webkit-color-swatch { border: none; border-radius: 2px; }
+  input.pick::-moz-color-swatch { border: none; border-radius: 2px; }
+  .auto {
+    font: 500 13px var(--body);
+    color: var(--muted);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 0 4px;
+    margin-right: 4px;
+    cursor: pointer;
+  }
+  .auto:hover { color: var(--ink); border-color: var(--line); }
   .role { color: var(--muted); font-size: 12px; font-family: var(--body); font-weight: 400; }
   .del {
     font: 500 14px var(--body);
@@ -312,7 +332,7 @@
 <div class="wrap">
   <header>
     <span class="eyebrow">Iterated function system · chaos game</span>
-    <h1>Barnsley Fern Lab</h1>
+    <h1>IFS Lab</h1>
     <p>The dashed frame stands for the whole image. Each coloured box shows where one map sends that frame. Add boxes, drag their corners, and the fractal becomes the shape that is made of those copies of itself.</p>
   </header>
 
@@ -356,12 +376,12 @@
           <div class="field">
             <label class="label" for="colorMode">Colour</label>
             <select id="colorMode">
-              <option value="map" selected>By map used</option>
+              <option value="map" selected>Blend of maps</option>
               <option value="density">By density</option>
             </select>
           </div>
         </div>
-        <p class="note"><b>Drag a corner</b> to move, scale, rotate, skew or flip a box. The solid dot is the corner that the frame’s solid dot maps to. Click a box to select it; press Delete to remove it. The frame stays fixed while you edit; “Fit view” resizes it to the current drawing.</p>
+        <p class="note"><b>Drag a corner</b> to move, scale, rotate, skew or flip a box. The solid dot is the corner that the frame’s solid dot maps to. Click a box to select it; press Delete to remove it. Click a map’s colour square in the table to change its colour. The frame stays fixed while you edit; “Fit view” resizes it to the current drawing.</p>
       </section>
 
       <section class="group">
@@ -465,13 +485,13 @@ y' = c·x + d·y + f      chosen with probability p</pre>
   let drag = null;
   let spawnCount = 0;
   let W = 1, H = 1, dpr = 1;
-  let counts, lastMap, image;
+  let counts, sumR, sumG, sumB, image;
   let job = 0;
 
   // ---------- geometry ----------
 
   function cloneMaps(i) {
-    return PRESETS[i].maps.map(m => ({ role: m.role, c: m.c.slice() }));
+    return PRESETS[i].maps.map(m => ({ role: m.role, c: m.c.slice(), color: null }));
   }
   function apply(c, x, y) {
     return [c[0] * x + c[1] * y + c[4], c[2] * x + c[3] * y + c[5]];
@@ -517,7 +537,10 @@ y' = c·x + d·y + f      chosen with probability p</pre>
     canvas.height = overlay.height = H;
     image = ctx.createImageData(W, H);
     counts = new Uint32Array(W * H);
-    lastMap = new Uint8Array(W * H);
+    // Running totals of the map colours that landed on each pixel, for blending.
+    sumR = new Uint32Array(W * H);
+    sumG = new Uint32Array(W * H);
+    sumB = new Uint32Array(W * H);
   }
   function computeView() {
     const fw = frame.maxX - frame.minX, fh = frame.maxY - frame.minY;
@@ -576,11 +599,23 @@ y' = c·x + d·y + f      chosen with probability p</pre>
     const h = hex.replace("#", "");
     return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
   }
+  // A map's own colour if one was picked, otherwise its theme colour.
+  function mapColor(i) {
+    return maps[i].color || cssVar("--map" + (i % 6));
+  }
+  // A random colour that reads on both the light and dark plate.
+  function randomColor() {
+    const h = Math.random() * 360, s = 0.6 + Math.random() * 0.2, l = 0.45 + Math.random() * 0.1;
+    const k = n => (n + h / 30) % 12;
+    const a = s * Math.min(l, 1 - l);
+    const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1));
+    return "#" + [f(0), f(8), f(4)].map(v => Math.round(v * 255).toString(16).padStart(2, "0")).join("");
+  }
   function palette() {
     return {
       bg: hexToRgb(cssVar("--plate")),
       accent: hexToRgb(cssVar("--accent")),
-      maps: [0, 1, 2, 3, 4, 5].map(i => hexToRgb(cssVar("--map" + i))),
+      maps: maps.map((_, i) => hexToRgb(mapColor(i))),
     };
   }
 
@@ -593,10 +628,13 @@ y' = c·x + d·y + f      chosen with probability p</pre>
       let r = br, g = bg, b = bb;
       if (n > 0) {
         const t = 0.35 + 0.65 * Math.pow(Math.log(1 + n) / logMax, 0.6);
-        const col = mode === "map" ? pal.maps[lastMap[i] % 6] : pal.accent;
-        r = br + (col[0] - br) * t;
-        g = bg + (col[1] - bg) * t;
-        b = bb + (col[2] - bb) * t;
+        // Blend: the average colour of every point that landed here.
+        const cr = mode === "map" ? sumR[i] / n : pal.accent[0];
+        const cg = mode === "map" ? sumG[i] / n : pal.accent[1];
+        const cb = mode === "map" ? sumB[i] / n : pal.accent[2];
+        r = br + (cr - br) * t;
+        g = bg + (cg - bg) * t;
+        b = bb + (cb - bb) * t;
       }
       data[p] = r; data[p + 1] = g; data[p + 2] = b; data[p + 3] = 255;
     }
@@ -607,7 +645,9 @@ y' = c·x + d·y + f      chosen with probability p</pre>
     const my = ++job;
     computeView();
     counts.fill(0);
-    lastMap.fill(0);
+    sumR.fill(0);
+    sumG.fill(0);
+    sumB.fill(0);
     const pal = palette();
     const mode = colorSel.value;
     emptyEl.hidden = maps.length > 0;
@@ -641,7 +681,10 @@ y' = c·x + d·y + f      chosen with probability p</pre>
           const idx = py * W + px;
           const v = ++counts[idx];
           if (v > maxCount) maxCount = v;
-          lastMap[idx] = k;
+          const col = pal.maps[k];
+          sumR[idx] += col[0];
+          sumG[idx] += col[1];
+          sumB[idx] += col[2];
         }
       }
       paint(pal, mode, maxCount);
@@ -684,7 +727,7 @@ y' = c·x + d·y + f      chosen with probability p</pre>
       const m = maps[i];
       const sel = i === selected;
       const bad = stretch(m.c) >= 1;
-      const col = bad ? warn : cssVar("--map" + (i % 6));
+      const col = bad ? warn : mapColor(i);
       const q = boxOf(m).map(toScreen);
       polygon(q);
       if (sel) { octx.fillStyle = rgba(col, 0.12); octx.fill(); }
@@ -763,7 +806,34 @@ y' = c·x + d·y + f      chosen with probability p</pre>
       tr.id = `row${r}`;
       const name = document.createElement("td");
       name.className = "map";
-      name.innerHTML = `<span class="swatch" style="background:var(--map${r % 6})"></span>f${r + 1} <span class="role">${m.role}</span>`;
+      const pick = document.createElement("input");
+      pick.type = "color";
+      pick.className = "pick";
+      pick.id = `m${r}-color`;
+      pick.setAttribute("aria-label", `Colour of f${r + 1}`);
+      pick.value = mapColor(r);
+      pick.addEventListener("input", () => {
+        m.color = pick.value;
+        auto.hidden = false;
+        queuePreview();
+      });
+      pick.addEventListener("change", () => render());
+      const auto = document.createElement("button");
+      auto.type = "button";
+      auto.className = "auto";
+      auto.textContent = "↺";
+      auto.title = "Use the automatic colour";
+      auto.setAttribute("aria-label", `Use the automatic colour for f${r + 1}`);
+      auto.hidden = !m.color;
+      auto.addEventListener("click", e => {
+        e.stopPropagation();
+        m.color = null;
+        auto.hidden = true;
+        pick.value = mapColor(r);
+        render();
+      });
+      name.append(pick, auto);
+      name.insertAdjacentHTML("beforeend", `f${r + 1} <span class="role">${m.role}</span>`);
       name.addEventListener("click", () => select(r));
       tr.appendChild(name);
       KEYS.forEach((k, j) => {
@@ -849,7 +919,7 @@ y' = c·x + d·y + f      chosen with probability p</pre>
     const q0 = [frame.minX + (u - s / 2) * w, frame.minY + (v - s / 2) * h];
     const q1 = [q0[0] + s * w, q0[1]];
     const q2 = [q0[0], q0[1] + s * h];
-    maps.push({ role: "new", c: [...fromCorners(q0, q1, q2), 0] });
+    maps.push({ role: "new", c: [...fromCorners(q0, q1, q2), 0], color: randomColor() });
     setPFromArea();
     selected = maps.length - 1;
     renderTable();
@@ -989,8 +1059,9 @@ y' = c·x + d·y + f      chosen with probability p</pre>
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => { sizeCanvases(); render(); }, 150);
   }).observe(plate);
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
-  new MutationObserver(() => render()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  function onTheme() { renderTable(); render(); }
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", onTheme);
+  new MutationObserver(onTheme).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
   sizeCanvases();
   loadPreset(0);
