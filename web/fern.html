@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Barnsley Fern Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #E9EFE8;
+    --surface: #F7FAF5;
+    --plate: #FBFDFA;
+    --ink: #15211A;
+    --muted: #57685C;
+    --line: #CBD7CB;
+    --accent: #2C7A4B;
+    --accent-ink: #FFFFFF;
+    --sel: #DCE8DC;
+    --warn: #C23B3B;
+    --map0: #B07A22;
+    --map1: #2C7A4B;
+    --map2: #3565A8;
+    --map3: #A2437A;
+    --map4: #6B5BB5;
+    --map5: #2A8C8C;
+    --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", sans-serif;
+    --body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #0D1310;
+      --surface: #141C17;
+      --plate: #080C0A;
+      --ink: #E1EAE2;
+      --muted: #93A597;
+      --line: #27342B;
+      --accent: #6CCB8C;
+      --accent-ink: #08140D;
+      --sel: #1E2B22;
+      --warn: #F07A7A;
+      --map0: #E2B45C;
+      --map1: #6CCB8C;
+      --map2: #7BA8EA;
+      --map3: #E68CBC;
+      --map4: #A99BF0;
+      --map5: #5FD0CF;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0D1310;
+    --surface: #141C17;
+    --plate: #080C0A;
+    --ink: #E1EAE2;
+    --muted: #93A597;
+    --line: #27342B;
+    --accent: #6CCB8C;
+    --accent-ink: #08140D;
+    --sel: #1E2B22;
+    --warn: #F07A7A;
+    --map0: #E2B45C;
+    --map1: #6CCB8C;
+    --map2: #7BA8EA;
+    --map3: #E68CBC;
+    --map4: #A99BF0;
+    --map5: #5FD0CF;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.55;
+    padding-inline: 16px;
+    padding-block: 28px 48px;
+    margin: 0;
+  }
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    gap: 24px;
+  }
+  header { display: grid; gap: 6px; max-width: 70ch; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: clamp(30px, 5vw, 46px);
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  header p { margin: 0; color: var(--muted); }
+
+  .lab {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 470px);
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .lab { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  .plate {
+    position: relative;
+    background: var(--plate);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    aspect-ratio: 4 / 5;
+    max-width: 100%;
+    max-height: 86vh;
+    width: 100%;
+    overflow: hidden;
+  }
+  .plate canvas {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  #overlay { touch-action: none; }
+  .plate-meta {
+    position: absolute;
+    left: 12px; right: 12px; bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+    pointer-events: none;
+  }
+  .plate-hint {
+    position: absolute;
+    left: 12px; right: 12px; top: 10px;
+    font-size: 13px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .plate-hint.warn { color: var(--warn); font-weight: 500; }
+  .empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding: 24px;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .empty strong {
+    display: block;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 20px;
+    color: var(--ink);
+  }
+
+  .panel { display: grid; gap: 22px; }
+  .group { display: grid; gap: 10px; }
+  .group h2 {
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 18px;
+    margin: 0;
+  }
+  .label {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font: 500 14px var(--body);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 6px 14px;
+    cursor: pointer;
+  }
+  .chip:hover { border-color: var(--accent); }
+  .chip[aria-pressed="true"] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+  .chip:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .row { display: flex; flex-wrap: wrap; gap: 12px 16px; align-items: end; }
+  .field { display: grid; gap: 4px; }
+  .check { display: flex; gap: 6px; align-items: center; font-size: 14px; padding-bottom: 6px; }
+  select {
+    font: 400 14px var(--body);
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 8px;
+  }
+
+  .btn {
+    font: 600 14px var(--body);
+    border-radius: 6px;
+    padding: 7px 14px;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+  .btn:hover { border-color: var(--accent); }
+
+  .table-scroll { overflow-x: auto; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    font-weight: 500;
+    color: var(--muted);
+    text-align: left;
+    padding: 4px 3px;
+    border-bottom: 1px solid var(--line);
+  }
+  td { padding: 3px; border-bottom: 1px solid var(--line); }
+  tr.sel td { background: var(--sel); }
+  tr.bad td.map { color: var(--warn); }
+  td.map {
+    white-space: nowrap;
+    font-weight: 500;
+    padding-right: 6px;
+    cursor: pointer;
+  }
+  .swatch {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    margin-right: 6px;
+  }
+  td input {
+    width: 100%;
+    min-width: 54px;
+    font: 400 13px var(--mono);
+    font-variant-numeric: tabular-nums;
+    color: var(--ink);
+    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 4px;
+  }
+  td input:hover { border-color: var(--line); }
+  .role { color: var(--muted); font-size: 12px; font-family: var(--body); font-weight: 400; }
+  .del {
+    font: 500 14px var(--body);
+    color: var(--muted);
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 2px 7px;
+    cursor: pointer;
+  }
+  .del:hover { color: var(--warn); border-color: var(--line); }
+  .empty-row td { color: var(--muted); font-family: var(--body); padding: 10px 3px; }
+
+  .formula {
+    font-family: var(--mono);
+    font-size: 13px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 0;
+  }
+  .note { color: var(--muted); font-size: 13.5px; margin: 0; max-width: 62ch; }
+  .note b { color: var(--ink); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Iterated function system · chaos game</span>
+    <h1>Barnsley Fern Lab</h1>
+    <p>The dashed frame stands for the whole image. Each coloured box shows where one map sends that frame. Add boxes, drag their corners, and the fractal becomes the shape that is made of those copies of itself.</p>
+  </header>
+
+  <div class="lab">
+    <div class="plate" id="plate">
+      <canvas id="canvas" aria-hidden="true"></canvas>
+      <canvas id="overlay" aria-label="Map editor: drag box corners to reshape maps"></canvas>
+      <div class="plate-hint" id="hint"></div>
+      <div class="empty" id="empty">
+        <div><strong>Empty frame</strong>Press “Add map” to place the first shrunken copy.</div>
+      </div>
+      <div class="plate-meta">
+        <span id="count">0 points</span>
+        <span id="bounds"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <section class="group">
+        <span class="label">Start from</span>
+        <div class="chips" id="presets"></div>
+        <p class="note" id="presetNote"></p>
+      </section>
+
+      <section class="group">
+        <div class="row">
+          <button class="btn primary" id="add" type="button">+ Add map</button>
+          <button class="btn" id="fit" type="button">Fit view</button>
+          <label class="check"><input type="checkbox" id="showBoxes" checked> Show boxes</label>
+        </div>
+        <div class="row">
+          <div class="field">
+            <label class="label" for="points">Points</label>
+            <select id="points">
+              <option value="200000">200,000</option>
+              <option value="1000000" selected>1,000,000</option>
+              <option value="3000000">3,000,000</option>
+              <option value="8000000">8,000,000</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="label" for="colorMode">Colour</label>
+            <select id="colorMode">
+              <option value="map" selected>By map used</option>
+              <option value="density">By density</option>
+            </select>
+          </div>
+        </div>
+        <p class="note"><b>Drag a corner</b> to move, scale, rotate, skew or flip a box. The solid dot is the corner that the frame’s solid dot maps to. Click a box to select it; press Delete to remove it. The frame stays fixed while you edit; “Fit view” resizes it to the current drawing.</p>
+      </section>
+
+      <section class="group">
+        <h2>The maps</h2>
+        <pre class="formula">x' = a·x + b·y + e
+y' = c·x + d·y + f      chosen with probability p</pre>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th>Map</th><th>a</th><th>b</th><th>c</th><th>d</th><th>e</th><th>f</th><th>p</th><th></th></tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <div class="row">
+          <button class="btn" id="weight" type="button">Set p from area</button>
+          <button class="btn" id="reset" type="button">Reset</button>
+        </div>
+        <p class="note">Adding or dragging a map sets every p from its box’s area (|ad − bc|, with a small minimum), so new maps get enough points to show up. You can still type p by hand; values are rescaled to sum to 1. Corners can’t be dragged so far that a box stops being smaller than the frame, since the drawing would then fly apart.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const PRESETS = [
+    {
+      name: "Blank",
+      note: "An empty frame. Add maps and drag their corners to build your own fractal.",
+      maps: [],
+    },
+    {
+      name: "Barnsley fern",
+      note: "Barnsley's original four maps from Fractals Everywhere (1988).",
+      maps: [
+        { role: "stem",          c: [0, 0, 0, 0.16, 0, 0, 0.01] },
+        { role: "whole frond",   c: [0.85, 0.04, -0.04, 0.85, 0, 1.6, 0.85] },
+        { role: "left leaflet",  c: [0.2, -0.26, 0.23, 0.22, 0, 1.6, 0.07] },
+        { role: "right leaflet", c: [-0.15, 0.28, 0.26, 0.24, 0, 0.44, 0.07] },
+      ],
+    },
+    {
+      name: "Cyclosorus",
+      note: "A thinner fern variety made by changing the leaflet maps.",
+      maps: [
+        { role: "stem",          c: [0, 0, 0, 0.25, 0, -0.4, 0.02] },
+        { role: "whole frond",   c: [0.95, 0.005, -0.005, 0.93, -0.002, 0.5, 0.84] },
+        { role: "left leaflet",  c: [0.035, -0.2, 0.16, 0.04, -0.09, 0.02, 0.07] },
+        { role: "right leaflet", c: [-0.04, 0.2, 0.16, 0.04, 0.083, 0.12, 0.07] },
+      ],
+    },
+    {
+      name: "Fishbone",
+      note: "Leaflets set almost at right angles to the stem.",
+      maps: [
+        { role: "stem",          c: [0, 0, 0, 0.25, 0, -0.14, 0.02] },
+        { role: "whole frond",   c: [0.85, 0.02, -0.02, 0.83, 0, 1.0, 0.84] },
+        { role: "left leaflet",  c: [0.09, -0.28, 0.3, 0.11, 0, 0.6, 0.07] },
+        { role: "right leaflet", c: [-0.09, 0.28, 0.3, 0.09, 0, 0.7, 0.07] },
+      ],
+    },
+    {
+      name: "Sierpinski",
+      note: "Three half-size copies. The same method, with no rotation.",
+      maps: [
+        { role: "left corner",  c: [0.5, 0, 0, 0.5, 0, 0, 0.3334] },
+        { role: "right corner", c: [0.5, 0, 0, 0.5, 0.5, 0, 0.3333] },
+        { role: "top corner",   c: [0.5, 0, 0, 0.5, 0.25, 0.5, 0.3333] },
+      ],
+    },
+  ];
+  const KEYS = ["a", "b", "c", "d", "e", "f", "p"];
+  const STRETCH_LIMIT = 0.97;   // largest allowed stretch of a box relative to the frame
+  const PREVIEW_POINTS = 80000; // points per redraw while dragging
+  const HANDLE_HIT = 11;        // css px
+  // Where new boxes appear, as fractions of the frame (centre of the box).
+  const SPAWN = [[0.5, 0.5], [0.3, 0.3], [0.7, 0.3], [0.5, 0.78], [0.25, 0.7], [0.75, 0.7]];
+
+  const canvas = document.getElementById("canvas");
+  const overlay = document.getElementById("overlay");
+  const plate = document.getElementById("plate");
+  const ctx = canvas.getContext("2d");
+  const octx = overlay.getContext("2d");
+  const tbody = document.getElementById("tbody");
+  const presetsEl = document.getElementById("presets");
+  const presetNote = document.getElementById("presetNote");
+  const pointsSel = document.getElementById("points");
+  const colorSel = document.getElementById("colorMode");
+  const showBoxes = document.getElementById("showBoxes");
+  const countEl = document.getElementById("count");
+  const boundsEl = document.getElementById("bounds");
+  const hintEl = document.getElementById("hint");
+  const emptyEl = document.getElementById("empty");
+
+  let presetIndex = 0;
+  let maps = [];
+  let frame = { minX: 0, minY: 0, maxX: 1, maxY: 1 };
+  let view = { scale: 1, offX: 0, offY: 0 };
+  let selected = -1;
+  let drag = null;
+  let spawnCount = 0;
+  let W = 1, H = 1, dpr = 1;
+  let counts, lastMap, image;
+  let job = 0;
+
+  // ---------- geometry ----------
+
+  function cloneMaps(i) {
+    return PRESETS[i].maps.map(m => ({ role: m.role, c: m.c.slice() }));
+  }
+  function apply(c, x, y) {
+    return [c[0] * x + c[1] * y + c[4], c[2] * x + c[3] * y + c[5]];
+  }
+  function frameCorners() {
+    const { minX, minY, maxX, maxY } = frame;
+    return [[minX, minY], [maxX, minY], [minX, maxY], [maxX, maxY]];
+  }
+  // Corners of the box a map makes: images of the frame's four corners.
+  function boxOf(m) {
+    return frameCorners().map(([x, y]) => apply(m.c, x, y));
+  }
+  // Solve for a..f given where the frame's corners P0, P1, P2 land.
+  function fromCorners(q0, q1, q2) {
+    const { minX, minY, maxX, maxY } = frame;
+    const w = maxX - minX, h = maxY - minY;
+    const a = (q1[0] - q0[0]) / w, b = (q2[0] - q0[0]) / h;
+    const c = (q1[1] - q0[1]) / w, d = (q2[1] - q0[1]) / h;
+    return [a, b, c, d, q0[0] - a * minX - b * minY, q0[1] - c * minX - d * minY];
+  }
+  // Largest singular value of the map measured in frame units. Below 1 means the box
+  // is smaller than the frame in every direction, so repeating the map shrinks.
+  function stretch(c) {
+    const w = frame.maxX - frame.minX, h = frame.maxY - frame.minY;
+    const p = c[0], q = c[1] * h / w, r = c[2] * w / h, s = c[3];
+    const S = p * p + q * q + r * r + s * s, D = p * s - q * r;
+    return Math.sqrt((S + Math.sqrt(Math.max(0, S * S - 4 * D * D))) / 2);
+  }
+  function setPFromArea() {
+    const areas = maps.map(m => Math.max(Math.abs(m.c[0] * m.c[3] - m.c[1] * m.c[2]), 0.01));
+    const total = areas.reduce((s, a) => s + a, 0);
+    maps.forEach((m, i) => { m.c[6] = +(areas[i] / total).toFixed(4); });
+  }
+
+  // ---------- view ----------
+
+  function sizeCanvases() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rect = plate.getBoundingClientRect();
+    W = Math.max(1, Math.round(rect.width * dpr));
+    H = Math.max(1, Math.round(rect.height * dpr));
+    canvas.width = overlay.width = W;
+    canvas.height = overlay.height = H;
+    image = ctx.createImageData(W, H);
+    counts = new Uint32Array(W * H);
+    lastMap = new Uint8Array(W * H);
+  }
+  function computeView() {
+    const fw = frame.maxX - frame.minX, fh = frame.maxY - frame.minY;
+    const pad = 0.08, top = 56 * dpr, bottom = 34 * dpr;
+    const scale = Math.min((W * (1 - 2 * pad)) / fw, (H - top - bottom - 2 * pad * W) / fh);
+    view = {
+      scale,
+      offX: (W - fw * scale) / 2 - frame.minX * scale,
+      offY: top + (H - top - bottom - fh * scale) / 2 + frame.maxY * scale,
+    };
+  }
+  function toScreen([x, y]) { return [x * view.scale + view.offX, view.offY - y * view.scale]; }
+  function toWorld(sx, sy) { return [(sx - view.offX) / view.scale, (view.offY - sy) / view.scale]; }
+
+  function cumulative() {
+    const ps = maps.map(m => Math.max(0, m.c[6]));
+    let total = ps.reduce((s, p) => s + p, 0);
+    if (total <= 0) { ps.fill(1); total = ps.length; }
+    let acc = 0;
+    return ps.map(p => (acc += p / total));
+  }
+  function pick(cum) {
+    const r = Math.random();
+    for (let i = 0; i < cum.length; i++) if (r < cum[i]) return i;
+    return cum.length - 1;
+  }
+
+  // Resize the frame to the attractor's bounding box.
+  function refitFrame() {
+    if (!maps.length) { frame = { minX: 0, minY: 0, maxX: 1, maxY: 1 }; return; }
+    const cum = cumulative();
+    let x = 0, y = 0;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    for (let n = 0; n < 60000; n++) {
+      [x, y] = apply(maps[pick(cum)].c, x, y);
+      if (n < 30 || !Number.isFinite(x) || !Number.isFinite(y)) continue;
+      if (x < minX) minX = x; if (x > maxX) maxX = x;
+      if (y < minY) minY = y; if (y > maxY) maxY = y;
+    }
+    if (!Number.isFinite(minX) || maxX - minX > 1e6 || maxY - minY > 1e6) return;
+    let spanX = maxX - minX, spanY = maxY - minY;
+    const big = Math.max(spanX, spanY);
+    if (big < 1e-9) return; // a single point: keep the current frame
+    // Keep a squashed attractor editable by giving its frame some thickness.
+    if (spanX < big * 0.05) { const m = (minX + maxX) / 2; minX = m - big * 0.025; maxX = m + big * 0.025; }
+    if (spanY < big * 0.05) { const m = (minY + maxY) / 2; minY = m - big * 0.025; maxY = m + big * 0.025; }
+    frame = { minX, minY, maxX, maxY };
+  }
+
+  // ---------- rendering ----------
+
+  function cssVar(name) {
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+  function hexToRgb(hex) {
+    const h = hex.replace("#", "");
+    return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+  }
+  function palette() {
+    return {
+      bg: hexToRgb(cssVar("--plate")),
+      accent: hexToRgb(cssVar("--accent")),
+      maps: [0, 1, 2, 3, 4, 5].map(i => hexToRgb(cssVar("--map" + i))),
+    };
+  }
+
+  function paint(pal, mode, maxCount) {
+    const data = image.data;
+    const [br, bg, bb] = pal.bg;
+    const logMax = Math.log(1 + maxCount);
+    for (let i = 0, p = 0; i < counts.length; i++, p += 4) {
+      const n = counts[i];
+      let r = br, g = bg, b = bb;
+      if (n > 0) {
+        const t = 0.35 + 0.65 * Math.pow(Math.log(1 + n) / logMax, 0.6);
+        const col = mode === "map" ? pal.maps[lastMap[i] % 6] : pal.accent;
+        r = br + (col[0] - br) * t;
+        g = bg + (col[1] - bg) * t;
+        b = bb + (col[2] - bb) * t;
+      }
+      data[p] = r; data[p + 1] = g; data[p + 2] = b; data[p + 3] = 255;
+    }
+    ctx.putImageData(image, 0, 0);
+  }
+
+  function render({ preview = false } = {}) {
+    const my = ++job;
+    computeView();
+    counts.fill(0);
+    lastMap.fill(0);
+    const pal = palette();
+    const mode = colorSel.value;
+    emptyEl.hidden = maps.length > 0;
+    boundsEl.textContent = `frame x ${frame.minX.toFixed(2)} … ${frame.maxX.toFixed(2)}   y ${frame.minY.toFixed(2)} … ${frame.maxY.toFixed(2)}`;
+    drawOverlay();
+    if (!maps.length) {
+      paint(pal, mode, 1);
+      countEl.textContent = "No maps yet";
+      return;
+    }
+    const cum = cumulative();
+    const target = preview ? Math.min(PREVIEW_POINTS, parseInt(pointsSel.value, 10)) : parseInt(pointsSel.value, 10);
+    const batch = preview ? target : Math.max(50000, Math.round(target / 40));
+    const { scale, offX, offY } = view;
+    let x = 0, y = 0, done = 0, maxCount = 1;
+    for (let n = 0; n < 30; n++) [x, y] = apply(maps[pick(cum)].c, x, y);
+
+    function step() {
+      if (my !== job) return;
+      const end = Math.min(target, done + batch);
+      for (; done < end; done++) {
+        const k = pick(cum);
+        const c = maps[k].c;
+        const nx = c[0] * x + c[1] * y + c[4];
+        y = c[2] * x + c[3] * y + c[5];
+        x = nx;
+        if (!(Math.abs(x) < 1e12 && Math.abs(y) < 1e12)) { x = 0; y = 0; continue; }
+        const px = Math.floor(x * scale + offX);
+        const py = Math.floor(offY - y * scale);
+        if (px >= 0 && px < W && py >= 0 && py < H) {
+          const idx = py * W + px;
+          const v = ++counts[idx];
+          if (v > maxCount) maxCount = v;
+          lastMap[idx] = k;
+        }
+      }
+      paint(pal, mode, maxCount);
+      countEl.textContent = preview ? `${done.toLocaleString()} points (preview)` : `${done.toLocaleString()} points`;
+      if (done < target) requestAnimationFrame(step);
+    }
+    step();
+  }
+
+  function rgba(hex, a) {
+    const [r, g, b] = hexToRgb(hex);
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+  }
+
+  function drawOverlay() {
+    octx.clearRect(0, 0, W, H);
+    if (!showBoxes.checked) return;
+    const muted = cssVar("--muted");
+    const plateCol = cssVar("--plate");
+    const warn = cssVar("--warn");
+
+    // Reference frame: the whole image.
+    const fc = frameCorners().map(toScreen);
+    octx.save();
+    octx.setLineDash([6 * dpr, 5 * dpr]);
+    octx.lineWidth = 1.25 * dpr;
+    octx.strokeStyle = muted;
+    polygon(fc);
+    octx.stroke();
+    octx.restore();
+    octx.fillStyle = muted;
+    dot(fc[0], 4 * dpr);
+    octx.font = `500 ${11 * dpr}px "IBM Plex Mono", ui-monospace, monospace`;
+    octx.textBaseline = "bottom";
+    octx.fillText("FRAME = WHOLE IMAGE", fc[2][0], fc[2][1] - 6 * dpr);
+
+    const order = maps.map((_, i) => i).filter(i => i !== selected);
+    if (selected >= 0) order.push(selected);
+    for (const i of order) {
+      const m = maps[i];
+      const sel = i === selected;
+      const bad = stretch(m.c) >= 1;
+      const col = bad ? warn : cssVar("--map" + (i % 6));
+      const q = boxOf(m).map(toScreen);
+      polygon(q);
+      if (sel) { octx.fillStyle = rgba(col, 0.12); octx.fill(); }
+      octx.lineWidth = (sel ? 2.25 : 1.5) * dpr;
+      octx.strokeStyle = col;
+      octx.setLineDash(bad ? [4 * dpr, 3 * dpr] : []);
+      polygon(q);
+      octx.stroke();
+      octx.setLineDash([]);
+
+      // Label near the centre.
+      const cx = (q[0][0] + q[3][0]) / 2, cy = (q[0][1] + q[3][1]) / 2;
+      octx.fillStyle = col;
+      octx.textAlign = "center";
+      octx.textBaseline = "middle";
+      octx.font = `600 ${(sel ? 12 : 11) * dpr}px "IBM Plex Mono", ui-monospace, monospace`;
+      octx.fillText("f" + (i + 1), cx, cy);
+      octx.textAlign = "start";
+
+      // Handles: P0's image is solid, P1's and P2's are hollow.
+      const r = (sel ? 6 : 4.5) * dpr;
+      octx.lineWidth = 2 * dpr;
+      [0, 1, 2].forEach(k => {
+        octx.beginPath();
+        octx.arc(q[k][0], q[k][1], r, 0, Math.PI * 2);
+        octx.fillStyle = k === 0 ? col : plateCol;
+        octx.fill();
+        octx.strokeStyle = col;
+        octx.stroke();
+      });
+    }
+  }
+  function polygon(q) {
+    octx.beginPath();
+    octx.moveTo(q[0][0], q[0][1]);
+    octx.lineTo(q[1][0], q[1][1]);
+    octx.lineTo(q[3][0], q[3][1]);
+    octx.lineTo(q[2][0], q[2][1]);
+    octx.closePath();
+  }
+  function dot([x, y], r) {
+    octx.beginPath();
+    octx.arc(x, y, r, 0, Math.PI * 2);
+    octx.fill();
+  }
+
+  // ---------- panel ----------
+
+  function renderPresets() {
+    presetsEl.innerHTML = "";
+    PRESETS.forEach((p, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chip";
+      b.textContent = p.name;
+      b.setAttribute("aria-pressed", String(i === presetIndex));
+      b.addEventListener("click", () => loadPreset(i));
+      presetsEl.appendChild(b);
+    });
+    presetNote.textContent = PRESETS[presetIndex].note;
+  }
+
+  function fmt(v) { return String(+v.toFixed(4)); }
+
+  function renderTable() {
+    tbody.innerHTML = "";
+    if (!maps.length) {
+      const tr = document.createElement("tr");
+      tr.className = "empty-row";
+      tr.innerHTML = `<td colspan="9">No maps. Press “Add map”.</td>`;
+      tbody.appendChild(tr);
+      return;
+    }
+    maps.forEach((m, r) => {
+      const tr = document.createElement("tr");
+      tr.id = `row${r}`;
+      const name = document.createElement("td");
+      name.className = "map";
+      name.innerHTML = `<span class="swatch" style="background:var(--map${r % 6})"></span>f${r + 1} <span class="role">${m.role}</span>`;
+      name.addEventListener("click", () => select(r));
+      tr.appendChild(name);
+      KEYS.forEach((k, j) => {
+        const td = document.createElement("td");
+        const input = document.createElement("input");
+        input.type = "number";
+        input.step = "0.01";
+        input.id = `m${r}-${k}`;
+        input.setAttribute("aria-label", `f${r + 1} ${k}`);
+        input.value = fmt(m.c[j]);
+        input.addEventListener("focus", () => select(r));
+        input.addEventListener("input", () => {
+          const v = parseFloat(input.value);
+          if (Number.isFinite(v)) { m.c[j] = v; markRows(); render(); }
+        });
+        td.appendChild(input);
+        tr.appendChild(td);
+      });
+      const td = document.createElement("td");
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "del";
+      del.textContent = "✕";
+      del.setAttribute("aria-label", `Delete f${r + 1}`);
+      del.addEventListener("click", () => removeMap(r));
+      td.appendChild(del);
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    });
+    markRows();
+  }
+
+  function updateInputs() {
+    maps.forEach((m, r) => KEYS.forEach((k, j) => {
+      const input = document.getElementById(`m${r}-${k}`);
+      if (input && input !== document.activeElement) input.value = fmt(m.c[j]);
+    }));
+    markRows();
+  }
+
+  function markRows() {
+    maps.forEach((m, r) => {
+      const tr = document.getElementById(`row${r}`);
+      if (!tr) return;
+      tr.classList.toggle("sel", r === selected);
+      tr.classList.toggle("bad", stretch(m.c) >= 1);
+    });
+  }
+
+  function select(i) {
+    if (selected === i) return;
+    selected = i;
+    markRows();
+    drawOverlay();
+  }
+
+  function setHint(text, warn = false) {
+    hintEl.textContent = text;
+    hintEl.classList.toggle("warn", warn);
+  }
+  function defaultHint() {
+    if (!maps.length) setHint("");
+    else if (maps.some(m => stretch(m.c) >= 1)) setHint("A dashed red box is not smaller than the frame, so the drawing can’t settle.", true);
+    else setHint("Drag a corner to reshape a box.");
+  }
+
+  function loadPreset(i) {
+    presetIndex = i;
+    maps = cloneMaps(i);
+    selected = -1;
+    spawnCount = 0;
+    refitFrame();
+    renderPresets();
+    renderTable();
+    defaultHint();
+    render();
+  }
+
+  function addMap() {
+    const w = frame.maxX - frame.minX, h = frame.maxY - frame.minY;
+    const s = 0.3;
+    const [u, v] = SPAWN[spawnCount++ % SPAWN.length];
+    const q0 = [frame.minX + (u - s / 2) * w, frame.minY + (v - s / 2) * h];
+    const q1 = [q0[0] + s * w, q0[1]];
+    const q2 = [q0[0], q0[1] + s * h];
+    maps.push({ role: "new", c: [...fromCorners(q0, q1, q2), 0] });
+    setPFromArea();
+    selected = maps.length - 1;
+    renderTable();
+    defaultHint();
+    render();
+  }
+
+  function removeMap(i) {
+    maps.splice(i, 1);
+    selected = -1;
+    renderTable();
+    defaultHint();
+    render();
+  }
+
+  // ---------- mouse editing ----------
+
+  function eventPoint(e) {
+    const rect = overlay.getBoundingClientRect();
+    return [(e.clientX - rect.left) * (W / rect.width), (e.clientY - rect.top) * (H / rect.height)];
+  }
+  function hitHandle(pt) {
+    if (!showBoxes.checked) return null;
+    const r2 = (HANDLE_HIT * dpr) ** 2;
+    const order = maps.map((_, i) => i).reverse();
+    if (selected >= 0) order.unshift(selected); // the selected box wins ties
+    for (const i of order) {
+      const q = boxOf(maps[i]).map(toScreen);
+      for (const k of [0, 1, 2]) {
+        const dx = q[k][0] - pt[0], dy = q[k][1] - pt[1];
+        if (dx * dx + dy * dy <= r2) return { i, k };
+      }
+    }
+    return null;
+  }
+  function hitBox(pt) {
+    if (!showBoxes.checked) return -1;
+    for (let i = maps.length - 1; i >= 0; i--) {
+      const q = boxOf(maps[i]).map(toScreen);
+      if (insideQuad([q[0], q[1], q[3], q[2]], pt)) return i;
+    }
+    return -1;
+  }
+  function insideQuad(poly, [x, y]) {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, yi] = poly[i], [xj, yj] = poly[j];
+      if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+
+  let previewQueued = false;
+  function queuePreview() {
+    if (previewQueued) return;
+    previewQueued = true;
+    requestAnimationFrame(() => {
+      previewQueued = false;
+      render({ preview: true });
+    });
+  }
+
+  overlay.addEventListener("pointerdown", e => {
+    if (e.button !== 0) return;
+    const pt = eventPoint(e);
+    const h = hitHandle(pt);
+    if (h) {
+      drag = h;
+      overlay.setPointerCapture(e.pointerId);
+      overlay.style.cursor = "grabbing";
+      select(h.i);
+      return;
+    }
+    select(hitBox(pt));
+  });
+
+  overlay.addEventListener("pointermove", e => {
+    const pt = eventPoint(e);
+    if (!drag) {
+      overlay.style.cursor = hitHandle(pt) ? "grab" : hitBox(pt) >= 0 ? "pointer" : "default";
+      return;
+    }
+    const m = maps[drag.i];
+    const q = boxOf(m);
+    q[drag.k] = toWorld(pt[0], pt[1]);
+    const c = fromCorners(q[0], q[1], q[2]);
+    if (stretch(c) >= STRETCH_LIMIT) {
+      setHint("That would make the box as big as the frame. Stopped at the largest size that still shrinks.", true);
+      return;
+    }
+    for (let j = 0; j < 6; j++) m.c[j] = c[j];
+    setPFromArea();
+    updateInputs();
+    setHint("Drag a corner to reshape a box.");
+    queuePreview();
+  });
+
+  function endDrag(e) {
+    if (!drag) return;
+    drag = null;
+    if (overlay.hasPointerCapture(e.pointerId)) overlay.releasePointerCapture(e.pointerId);
+    overlay.style.cursor = "grab";
+    defaultHint();
+    render();
+  }
+  overlay.addEventListener("pointerup", endDrag);
+  overlay.addEventListener("pointercancel", endDrag);
+
+  window.addEventListener("keydown", e => {
+    if (selected < 0 || drag) return;
+    const tag = document.activeElement && document.activeElement.tagName;
+    if (tag === "INPUT" || tag === "SELECT") return;
+    if (e.key === "Delete" || e.key === "Backspace") {
+      e.preventDefault();
+      removeMap(selected);
+    } else if (e.key === "Escape") {
+      select(-1);
+    }
+  });
+
+  // ---------- wiring ----------
+
+  document.getElementById("add").addEventListener("click", addMap);
+  document.getElementById("fit").addEventListener("click", () => { refitFrame(); markRows(); defaultHint(); render(); });
+  pointsSel.addEventListener("change", () => render());
+  colorSel.addEventListener("change", () => render());
+  showBoxes.addEventListener("change", drawOverlay);
+  document.getElementById("reset").addEventListener("click", () => loadPreset(presetIndex));
+  document.getElementById("weight").addEventListener("click", () => {
+    setPFromArea();
+    updateInputs();
+    render();
+  });
+
+  let resizeTimer;
+  new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { sizeCanvases(); render(); }, 150);
+  }).observe(plate);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => render());
+  new MutationObserver(() => render()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  sizeCanvases();
+  loadPreset(0);
+})();
+</script>
+</body>
+</html>
