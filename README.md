@@ -1,4 +1,4 @@
-# hello_world
+# ifs_lab
 
 A learning project for Claude Code. It holds two things:
 

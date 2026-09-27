@@ -1,4 +1,4 @@
-# hello_world
+# ifs_lab
 
 A small Rust command-line program that prints "Hello World". It's a learning project for Claude Code.
 
