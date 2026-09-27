@@ -3,7 +3,7 @@
 A learning project for Claude Code. It holds two things:
 
 - A small Rust command-line program that prints "Hello World".
-- **Barnsley Fern Lab** (`web/fern.html`), a browser page for drawing and designing fractals. [Try it live](https://harveyrook.github.io/ifs_lab/web/fern.html).
+- **IFS Lab** (`web/fern.html`), a browser page for drawing and designing fractals. [Try it live](https://harveyrook.github.io/ifs_lab/web/fern.html).
 
 ## Rust program
 
@@ -13,7 +13,7 @@ cargo run
 
 Other commands: `cargo build`, `cargo test`, `cargo fmt`, `cargo clippy`.
 
-## Barnsley Fern Lab
+## IFS Lab
 
 **Live page:** https://harveyrook.github.io/ifs_lab/web/fern.html
 
